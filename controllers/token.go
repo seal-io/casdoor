@@ -19,6 +19,7 @@ import (
 	"net/http"
 
 	"github.com/beego/beego/utils/pagination"
+
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/util"
 )
@@ -182,6 +183,7 @@ func (c *ApiController) GetOAuthToken() {
 	password := c.Input().Get("password")
 	tag := c.Input().Get("tag")
 	avatar := c.Input().Get("avatar")
+	expiryInSeconds, _ := c.GetInt("expiry_in_seconds")
 
 	if clientId == "" && clientSecret == "" {
 		clientId, clientSecret, _ = c.Ctx.Request.BasicAuth()
@@ -200,12 +202,12 @@ func (c *ApiController) GetOAuthToken() {
 			password = tokenRequest.Password
 			tag = tokenRequest.Tag
 			avatar = tokenRequest.Avatar
+			expiryInSeconds = tokenRequest.ExpiryInSeconds
 		}
 	}
 	host := c.Ctx.Request.Host
 
-	c.Data["json"] = object.GetOAuthToken(grantType, clientId, clientSecret, code, verifier, scope, username, password, host, tag, avatar, c.GetAcceptLanguage())
-	c.SetTokenErrorHttpStatus()
+	c.Data["json"] = object.GetOAuthToken(grantType, clientId, clientSecret, code, verifier, scope, username, password, host, tag, avatar, c.GetAcceptLanguage(), expiryInSeconds)
 	c.ServeJSON()
 }
 

@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"time"
 
+	"xorm.io/core"
+
 	"github.com/casdoor/casdoor/i18n"
 	"github.com/casdoor/casdoor/idp"
 	"github.com/casdoor/casdoor/util"
-	"xorm.io/core"
 )
 
 const (
@@ -63,6 +64,7 @@ type Token struct {
 }
 
 type TokenWrapper struct {
+	Name         string `json:"name"`
 	AccessToken  string `json:"access_token"`
 	IdToken      string `json:"id_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -284,8 +286,9 @@ func GetOAuthCode(userId string, clientId string, responseType string, redirectU
 		}
 	}
 
+	expireInSeconds := application.ExpireInHours * hourSeconds
 	ExtendUserWithRolesAndPermissions(user)
-	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, nonce, scope, host)
+	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, nonce, scope, host, expireInSeconds)
 	if err != nil {
 		panic(err)
 	}
@@ -304,7 +307,7 @@ func GetOAuthCode(userId string, clientId string, responseType string, redirectU
 		Code:          util.GenerateClientId(),
 		AccessToken:   accessToken,
 		RefreshToken:  refreshToken,
-		ExpiresIn:     application.ExpireInHours * hourSeconds,
+		ExpiresIn:     expireInSeconds,
 		Scope:         scope,
 		TokenType:     "Bearer",
 		CodeChallenge: challenge,
@@ -319,7 +322,7 @@ func GetOAuthCode(userId string, clientId string, responseType string, redirectU
 	}
 }
 
-func GetOAuthToken(grantType string, clientId string, clientSecret string, code string, verifier string, scope string, username string, password string, host string, tag string, avatar string, lang string) interface{} {
+func GetOAuthToken(grantType string, clientId string, clientSecret string, code string, verifier string, scope string, username string, password string, host string, tag string, avatar string, lang string, expireInSeconds int) interface{} {
 	application := GetApplicationByClientId(clientId)
 	if application == nil {
 		return &TokenError{
@@ -343,9 +346,9 @@ func GetOAuthToken(grantType string, clientId string, clientSecret string, code 
 	case "authorization_code": // Authorization Code Grant
 		token, tokenError = GetAuthorizationCodeToken(application, clientSecret, code, verifier)
 	case "password": //	Resource Owner Password Credentials Grant
-		token, tokenError = GetPasswordToken(application, username, password, scope, host)
+		token, tokenError = GetPasswordToken(application, username, password, scope, host, expireInSeconds)
 	case "client_credentials": // Client Credentials Grant
-		token, tokenError = GetClientCredentialsToken(application, clientSecret, scope, host)
+		token, tokenError = GetClientCredentialsToken(application, clientSecret, scope, host, expireInSeconds)
 	}
 
 	if tag == "wechat_miniprogram" {
@@ -360,6 +363,7 @@ func GetOAuthToken(grantType string, clientId string, clientSecret string, code 
 	token.CodeIsUsed = true
 	updateUsedByCode(token)
 	tokenWrapper := &TokenWrapper{
+		Name:         token.Name,
 		AccessToken:  token.AccessToken,
 		IdToken:      token.AccessToken,
 		RefreshToken: token.RefreshToken,
@@ -420,7 +424,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 	}
 
 	ExtendUserWithRolesAndPermissions(user)
-	newAccessToken, newRefreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host)
+	newAccessToken, newRefreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host, token.ExpiresIn)
 	if err != nil {
 		return &TokenError{
 			Error:            EndpointError,
@@ -438,7 +442,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 		Code:         util.GenerateClientId(),
 		AccessToken:  newAccessToken,
 		RefreshToken: newRefreshToken,
-		ExpiresIn:    application.ExpireInHours * hourSeconds,
+		ExpiresIn:    token.ExpiresIn,
 		Scope:        scope,
 		TokenType:    "Bearer",
 	}
@@ -446,6 +450,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 	DeleteToken(&token)
 
 	tokenWrapper := &TokenWrapper{
+		Name:         newToken.Name,
 		AccessToken:  newToken.AccessToken,
 		IdToken:      newToken.AccessToken,
 		RefreshToken: newToken.RefreshToken,
@@ -548,7 +553,11 @@ func GetAuthorizationCodeToken(application *Application, clientSecret string, co
 
 // GetPasswordToken
 // Resource Owner Password Credentials flow
-func GetPasswordToken(application *Application, username string, password string, scope string, host string) (*Token, *TokenError) {
+func GetPasswordToken(application *Application, username string, password string, scope string, host string, expireInSeconds int) (*Token, *TokenError) {
+	if expireInSeconds == 0 {
+		expireInSeconds = application.ExpireInHours * hourSeconds
+	}
+
 	user := getUser(application.Organization, username)
 	if user == nil {
 		return nil, &TokenError{
@@ -571,7 +580,7 @@ func GetPasswordToken(application *Application, username string, password string
 	}
 
 	ExtendUserWithRolesAndPermissions(user)
-	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host)
+	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host, expireInSeconds)
 	if err != nil {
 		return nil, &TokenError{
 			Error:            EndpointError,
@@ -588,7 +597,7 @@ func GetPasswordToken(application *Application, username string, password string
 		Code:         util.GenerateClientId(),
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    application.ExpireInHours * hourSeconds,
+		ExpiresIn:    expireInSeconds,
 		Scope:        scope,
 		TokenType:    "Bearer",
 		CodeIsUsed:   true,
@@ -599,7 +608,11 @@ func GetPasswordToken(application *Application, username string, password string
 
 // GetClientCredentialsToken
 // Client Credentials flow
-func GetClientCredentialsToken(application *Application, clientSecret string, scope string, host string) (*Token, *TokenError) {
+func GetClientCredentialsToken(application *Application, clientSecret string, scope string, host string, expireInSeconds int) (*Token, *TokenError) {
+	if expireInSeconds == 0 {
+		expireInSeconds = application.ExpireInHours * hourSeconds
+	}
+
 	if application.ClientSecret != clientSecret {
 		return nil, &TokenError{
 			Error:            InvalidClient,
@@ -612,7 +625,7 @@ func GetClientCredentialsToken(application *Application, clientSecret string, sc
 		Name:  fmt.Sprintf("app/%s", application.Name),
 	}
 
-	accessToken, _, tokenName, err := generateJwtToken(application, nullUser, "", scope, host)
+	accessToken, _, tokenName, err := generateJwtToken(application, nullUser, "", scope, host, expireInSeconds)
 	if err != nil {
 		return nil, &TokenError{
 			Error:            EndpointError,
@@ -628,7 +641,7 @@ func GetClientCredentialsToken(application *Application, clientSecret string, sc
 		User:         nullUser.Name,
 		Code:         util.GenerateClientId(),
 		AccessToken:  accessToken,
-		ExpiresIn:    application.ExpireInHours * hourSeconds,
+		ExpiresIn:    expireInSeconds,
 		Scope:        scope,
 		TokenType:    "Bearer",
 		CodeIsUsed:   true,
@@ -641,7 +654,8 @@ func GetClientCredentialsToken(application *Application, clientSecret string, sc
 // Implicit flow
 func GetTokenByUser(application *Application, user *User, scope string, host string) (*Token, error) {
 	ExtendUserWithRolesAndPermissions(user)
-	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host)
+	expireInSeconds := application.ExpireInHours * hourSeconds
+	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host, expireInSeconds)
 	if err != nil {
 		return nil, err
 	}
@@ -655,7 +669,7 @@ func GetTokenByUser(application *Application, user *User, scope string, host str
 		Code:         util.GenerateClientId(),
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    application.ExpireInHours * hourSeconds,
+		ExpiresIn:    expireInSeconds,
 		Scope:        scope,
 		TokenType:    "Bearer",
 		CodeIsUsed:   true,
@@ -728,7 +742,8 @@ func GetWechatMiniProgramToken(application *Application, code string, host strin
 	}
 
 	ExtendUserWithRolesAndPermissions(user)
-	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, "", "", host)
+	expireInSeconds := application.ExpireInHours * 60
+	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, "", "", host, expireInSeconds)
 	if err != nil {
 		return nil, &TokenError{
 			Error:            EndpointError,
@@ -746,7 +761,7 @@ func GetWechatMiniProgramToken(application *Application, code string, host strin
 		Code:         session.SessionKey, // a trick, because miniprogram does not use the code, so use the code field to save the session_key
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    application.ExpireInHours * 60,
+		ExpiresIn:    expireInSeconds,
 		Scope:        "",
 		TokenType:    "Bearer",
 		CodeIsUsed:   true,
