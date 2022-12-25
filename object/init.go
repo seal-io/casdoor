@@ -196,7 +196,7 @@ func initBuiltInCert() {
 		Type:            "x509",
 		CryptoAlgorithm: "RS256",
 		BitSize:         4096,
-		ExpireInYears:   20,
+		ExpireInYears:   50,
 		Certificate:     tokenJwtCertificate,
 		PrivateKey:      tokenJwtPrivateKey,
 	}
