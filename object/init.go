@@ -19,9 +19,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/duo-labs/webauthn/webauthn"
+
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/util"
-	"github.com/duo-labs/webauthn/webauthn"
 )
 
 func InitDb() {
@@ -106,7 +107,7 @@ func initBuiltInUser() {
 		CreatedTime:       util.GetCurrentTime(),
 		Id:                util.GenerateId(),
 		Type:              "normal-user",
-		Password:          "123",
+		Password:          "Admin@123",
 		DisplayName:       "Admin",
 		Avatar:            fmt.Sprintf("%s/img/casbin.svg", conf.GetConfigString("staticBaseUrl")),
 		Email:             "admin@example.com",
