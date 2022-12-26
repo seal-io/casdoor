@@ -1,0 +1,155 @@
+name: ci
+on:
+  push:
+    branches:
+      - 'dev'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+\+seal.[0-9]+'
+  pull_request:
+    branches:
+      - 'dev'
+  workflow_dispatch:
+env:
+  BUILD_PLATFORMS: "linux/amd64,linux/arm64"
+  IMAGE_REPO: "sealio"
+jobs:
+  build-linux:
+    timeout-minutes: 30
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17.13
+      - name: Set up Build Cache
+        timeout-minutes: 10
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ${{ github.workspace }}/sbin
+            ${{ github.workspace }}/dist
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Build
+        timeout-minutes: 15
+        run: |
+          make deps
+          make lint
+          make build
+        env:
+          TAG: "${{ github.ref_name }}"
+          VERSION: "${{ github.ref_name }}"
+          LINT_DIRTY_CHECK: "true"
+      - name: Set up QEMU
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/setup-qemu-action@v2
+        with:
+          image: tonistiigi/binfmt:qemu-v6.2.0
+          platforms: "arm64"
+      - name: Set up Buildx
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/setup-buildx-action@v2
+      - name: Get Docker Metadata
+        if: ${{ github.event_name != 'pull_request' }}
+        id: casdoor
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.IMAGE_REPO }}/casdoor
+      - name: Login Dockerhub
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.CI_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.CI_DOCKERHUB_PASSWORD }}
+      - name: Package And Release
+        if: ${{ github.event_name != 'pull_request' }}
+        timeout-minutes: 30
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          file: hack/docker/Dockerfile
+          context: .
+          platforms: ${{ env.BUILD_PLATFORMS }}
+          tags: ${{ steps.casdoor.outputs.tags }}
+          labels: ${{ steps.casdoor.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.IMAGE_REPO }}/build-cache:casdoor
+          cache-to: type=registry,mode=max,compression=zstd,compression-level=20,ref=${{ env.IMAGE_REPO }}/build-cache:casdoor
+      - name: Set up Archive Cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/archive-linux
+          key: archive-linux-${{ github.sha }}
+      - name: Archive
+        run: |
+          mkdir -p /tmp/archive-linux
+          cp -rf ${{ github.workspace }}/bin/* /tmp/archive-linux
+  build-darwin:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    timeout-minutes: 30
+    runs-on: macos-12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17.13
+      - name: Set up Build Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/Library/Caches/go-build
+            ~/go/pkg/mod
+            ${{ github.workspace }}/sbin
+          key: build-${{ hashFiles('**/go.sum') }}
+      - name: Build
+        timeout-minutes: 15
+        run: make build
+        env:
+          BUILD_PLATFORMS: "darwin/amd64,darwin/arm64"
+      - name: Set up Archive Cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/archive-darwin
+          key: archive-darwin-${{ github.sha }}
+      - name: Archive
+        run: |
+          mkdir -p /tmp/archive-darwin
+          cp -rf ${{ github.workspace }}/bin/* /tmp/archive-darwin
+  archive:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    needs:
+      - build-linux
+      - build-darwin
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set up Linux Archive Cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/archive-linux
+          key: archive-linux-${{ github.sha }}
+      - name: Set up Darwin Archive Cache
+        uses: actions/cache@v3
+        with:
+          path: /tmp/archive-darwin
+          key: archive-darwin-${{ github.sha }}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ github.token }}
+          fail_on_unmatched_files: true
+          files: |
+            /tmp/archive-linux/*
+            /tmp/archive-darwin/*
