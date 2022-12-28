@@ -427,7 +427,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 	}
 
 	ExtendUserWithRolesAndPermissions(user)
-	newAccessToken, newRefreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host, token.ExpiresIn)
+	newAccessToken, newRefreshToken, _, err := generateJwtToken(application, user, "", scope, host, token.ExpiresIn)
 	if err != nil {
 		return &TokenError{
 			Error:            EndpointError,
@@ -437,7 +437,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 
 	newToken := &Token{
 		Owner:        application.Owner,
-		Name:         tokenName,
+		Name:         token.Name,
 		CreatedTime:  util.GetCurrentTime(),
 		Application:  application.Name,
 		Organization: user.Owner,
@@ -449,8 +449,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 		Scope:        scope,
 		TokenType:    "Bearer",
 	}
-	AddToken(newToken)
-	DeleteToken(&token)
+	UpdateToken(token.GetId(), newToken)
 
 	tokenWrapper := &TokenWrapper{
 		Owner:        newToken.Owner,
