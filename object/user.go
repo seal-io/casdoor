@@ -18,10 +18,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/casdoor/casdoor/conf"
-	"github.com/casdoor/casdoor/util"
 	"github.com/duo-labs/webauthn/webauthn"
 	"xorm.io/core"
+
+	"github.com/casdoor/casdoor/conf"
+	"github.com/casdoor/casdoor/util"
 )
 
 const (
@@ -458,6 +459,8 @@ func AddUser(user *User) bool {
 	if organization == nil {
 		return false
 	}
+
+	user.CreatedTime = util.GetCurrentTime()
 
 	user.UpdateUserPassword(organization)
 

@@ -18,10 +18,11 @@ import (
 	"fmt"
 	"strings"
 
+	"xorm.io/core"
+
 	"github.com/casdoor/casdoor/cred"
 	"github.com/casdoor/casdoor/i18n"
 	"github.com/casdoor/casdoor/util"
-	"xorm.io/core"
 )
 
 type AccountItem struct {
@@ -164,6 +165,8 @@ func UpdateOrganization(id string, organization *Organization) bool {
 }
 
 func AddOrganization(organization *Organization) bool {
+	organization.CreatedTime = util.GetCurrentTime()
+
 	affected, err := adapter.Engine.Insert(organization)
 	if err != nil {
 		panic(err)
