@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/casdoor/casdoor/util"
 	"github.com/golang-jwt/jwt/v4"
+
+	"github.com/casdoor/casdoor/util"
 )
 
 type Claims struct {
@@ -223,9 +224,12 @@ func refineUser(user *User) *User {
 	return user
 }
 
-func generateJwtToken(application *Application, user *User, nonce string, scope string, host string) (string, string, string, error) {
+func generateJwtToken(application *Application, user *User, nonce string, scope string, host string, expireInSeconds int) (string, string, string, error) {
+	if expireInSeconds <= 0 {
+		expireInSeconds = application.ExpireInHours * hourSeconds
+	}
 	nowTime := time.Now()
-	expireTime := nowTime.Add(time.Duration(application.ExpireInHours) * time.Hour)
+	expireTime := nowTime.Add(time.Duration(expireInSeconds) * time.Second)
 	refreshExpireTime := nowTime.Add(time.Duration(application.RefreshExpireInHours) * time.Hour)
 	if application.RefreshExpireInHours == 0 {
 		refreshExpireTime = expireTime

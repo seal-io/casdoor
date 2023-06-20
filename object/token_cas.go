@@ -26,8 +26,9 @@ import (
 	"time"
 
 	"github.com/beevik/etree"
-	"github.com/casdoor/casdoor/util"
 	dsig "github.com/russellhaering/goxmldsig"
+
+	"github.com/casdoor/casdoor/util"
 )
 
 type CasServiceResponse struct {
@@ -96,6 +97,7 @@ type CasProxySuccess struct {
 	XMLName     xml.Name `xml:"cas:proxySuccess" json:"-"`
 	ProxyTicket string   `xml:"cas:proxyTicket"`
 }
+
 type CasProxyFailure struct {
 	XMLName xml.Name `xml:"cas:proxyFailure" json:"-"`
 	Code    string   `xml:"code,attr"`
@@ -111,6 +113,7 @@ type Saml11Request struct {
 	IssueInstant      string   `xml:"IssueInstance,attr"`
 	AssertionArtifact Saml11AssertionArtifact
 }
+
 type Saml11AssertionArtifact struct {
 	XMLName  xml.Name `xml:"AssertionArtifact"`
 	InnerXML string   `xml:",innerxml"`

@@ -42,7 +42,6 @@ require (
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/nyaruka/phonenumbers v1.1.5
 	github.com/pkoukk/tiktoken-go v0.1.1
-	github.com/plutov/paypal/v4 v4.7.0
 	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/qiangmzsx/string-adapter/v2 v2.1.0
@@ -59,7 +58,7 @@ require (
 	github.com/tealeg/xlsx v1.0.5
 	github.com/thanhpk/randstr v1.0.4
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
-	github.com/xorm-io/builder v0.3.13 // indirect
+	github.com/xorm-io/builder v0.3.13
 	github.com/xorm-io/core v0.7.4
 	github.com/xorm-io/xorm v1.1.6
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
@@ -71,4 +70,5 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/sqlite v1.10.1-0.20210314190707-798bbeb9bb84
+	xorm.io/core v0.7.3
 )
