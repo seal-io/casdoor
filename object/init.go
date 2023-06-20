@@ -185,7 +185,8 @@ func initBuiltInApplication() {
 			{Name: "Agreement", Visible: true, Required: true, Prompted: false, Rule: "None"},
 		},
 		RedirectUris:  []string{},
-		ExpireInHours: 168,
+		ExpireInHours: 1,
+		GrantTypes:    []string{"token", "password", "client_credentials", "authorization_code"},
 		FormOffset:    2,
 	}
 	_, err = AddApplication(application)
