@@ -32,3 +32,4 @@ commentsRouter*.go
 casdoor
 server_linux_arm64
 server_linux_amd64
+sbin
