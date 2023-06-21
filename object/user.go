@@ -597,6 +597,8 @@ func AddUser(user *User) (bool, error) {
 		user.PasswordType = organization.PasswordType
 	}
 
+	user.CreatedTime = util.GetCurrentTime()
+
 	user.UpdateUserPassword(organization)
 
 	err = user.UpdateUserHash()
