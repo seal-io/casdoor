@@ -16,7 +16,10 @@ package object
 
 import (
 	"fmt"
+	"net/url"
+	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/beego/beego"
 	"github.com/casdoor/casdoor/conf"
@@ -87,6 +90,14 @@ func NewAdapter(driverName string, dataSourceName string, dbName string) *Adapte
 	a.dataSourceName = dataSourceName
 	a.dbName = dbName
 
+	if a.dbName == "" {
+		uri, err := url.Parse(dataSourceName)
+		if err != nil {
+			panic(err)
+		}
+		a.dbName = filepath.Base(uri.Path)
+	}
+
 	// Open the DB, create it if not existed.
 	a.open()
 
@@ -103,7 +114,19 @@ func (a *Adapter) CreateDatabase() error {
 	}
 	defer engine.Close()
 
-	_, err = engine.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s default charset utf8mb4 COLLATE utf8mb4_general_ci", a.dbName))
+	stmt := "CREATE DATABASE IF NOT EXISTS %s default charset utf8mb4 COLLATE utf8mb4_general_ci"
+	if a.driverName == "postgres" {
+		stmt = "CREATE DATABASE %s"
+	}
+
+	_, err = engine.Exec(fmt.Sprintf(stmt, a.dbName))
+	if err != nil {
+		errMsg := err.Error()
+		if a.driverName == "postgres" &&
+			strings.Contains(errMsg, "already exists") {
+			return nil
+		}
+	}
 	return err
 }
 
