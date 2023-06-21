@@ -310,18 +310,19 @@ func (c *ApiController) IntrospectToken() {
 	}
 
 	c.Data["json"] = &object.IntrospectionResponse{
-		Active:    true,
-		Scope:     jwtToken.Scope,
-		ClientId:  clientId,
-		Username:  token.User,
-		TokenType: token.TokenType,
-		Exp:       jwtToken.ExpiresAt.Unix(),
-		Iat:       jwtToken.IssuedAt.Unix(),
-		Nbf:       jwtToken.NotBefore.Unix(),
-		Sub:       jwtToken.Subject,
-		Aud:       jwtToken.Audience,
-		Iss:       jwtToken.Issuer,
-		Jti:       jwtToken.Id,
+		Active:       true,
+		Scope:        jwtToken.Scope,
+		ClientId:     clientId,
+		Organization: token.Organization,
+		Username:     token.User,
+		TokenType:    token.TokenType,
+		Exp:          jwtToken.ExpiresAt.Unix(),
+		Iat:          jwtToken.IssuedAt.Unix(),
+		Nbf:          jwtToken.NotBefore.Unix(),
+		Sub:          jwtToken.Subject,
+		Aud:          jwtToken.Audience,
+		Iss:          jwtToken.Issuer,
+		Jti:          jwtToken.Id,
 	}
 	c.ServeJSON()
 }
