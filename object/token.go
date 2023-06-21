@@ -483,7 +483,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 	if err != nil {
 		return nil, err
 	}
-	newAccessToken, newRefreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host, token.ExpiresIn)
+	newAccessToken, newRefreshToken, _, err := generateJwtToken(application, user, "", scope, host, token.ExpiresIn)
 	if err != nil {
 		return &TokenError{
 			Error:            EndpointError,
@@ -493,7 +493,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 
 	newToken := &Token{
 		Owner:        application.Owner,
-		Name:         tokenName,
+		Name:         token.Name,
 		CreatedTime:  util.GetCurrentTime(),
 		Application:  application.Name,
 		Organization: user.Owner,
@@ -505,12 +505,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 		Scope:        scope,
 		TokenType:    "Bearer",
 	}
-	_, err = AddToken(newToken)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = DeleteToken(&token)
+	_, err = UpdateToken(token.GetId(), newToken)
 	if err != nil {
 		return nil, err
 	}
