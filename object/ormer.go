@@ -18,7 +18,9 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"runtime"
 	"strings"
@@ -152,6 +154,15 @@ func refineDataSourceNameForPostgres(dataSourceName string) string {
 }
 
 func createDatabaseForPostgres(driverName string, dataSourceName string, dbName string) error {
+	if dbName == "" {
+		uri, err := url.Parse(dataSourceName)
+		if err != nil {
+			return fmt.Errorf("failed to parse dataSourceName: %w", err)
+		}
+
+		dbName = path.Base(uri.Path)
+	}
+
 	if driverName == "postgres" {
 		db, err := sql.Open(driverName, refineDataSourceNameForPostgres(dataSourceName))
 		if err != nil {
