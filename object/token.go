@@ -81,18 +81,19 @@ type TokenError struct {
 }
 
 type IntrospectionResponse struct {
-	Active    bool     `json:"active"`
-	Scope     string   `json:"scope,omitempty"`
-	ClientId  string   `json:"client_id,omitempty"`
-	Username  string   `json:"username,omitempty"`
-	TokenType string   `json:"token_type,omitempty"`
-	Exp       int64    `json:"exp,omitempty"`
-	Iat       int64    `json:"iat,omitempty"`
-	Nbf       int64    `json:"nbf,omitempty"`
-	Sub       string   `json:"sub,omitempty"`
-	Aud       []string `json:"aud,omitempty"`
-	Iss       string   `json:"iss,omitempty"`
-	Jti       string   `json:"jti,omitempty"`
+	Active       bool     `json:"active"`
+	Scope        string   `json:"scope,omitempty"`
+	ClientId     string   `json:"client_id,omitempty"`
+	Organization string   `json:"organization,omitempty"`
+	Username     string   `json:"username,omitempty"`
+	TokenType    string   `json:"token_type,omitempty"`
+	Exp          int64    `json:"exp,omitempty"`
+	Iat          int64    `json:"iat,omitempty"`
+	Nbf          int64    `json:"nbf,omitempty"`
+	Sub          string   `json:"sub,omitempty"`
+	Aud          []string `json:"aud,omitempty"`
+	Iss          string   `json:"iss,omitempty"`
+	Jti          string   `json:"jti,omitempty"`
 }
 
 func GetTokenCount(owner, organization, field, value string) (int64, error) {
