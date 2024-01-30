@@ -30,7 +30,13 @@ commentsRouter*.go
 
 # ignore build result
 casdoor
+<<<<<<< HEAD
 server
 
 # include helm-chart
 !manifests/casdoor
+=======
+server_linux_arm64
+server_linux_amd64
+sbin
+>>>>>>> 112384a5 (ci: adjust)
