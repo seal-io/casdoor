@@ -432,7 +432,7 @@ func GetOAuthToken(grantType string, clientId string, clientSecret string, code 
 	case "password": //	Resource Owner Password Credentials Grant
 		token, tokenError, err = GetPasswordToken(application, username, password, scope, host, expireInSeconds)
 	case "client_credentials": // Client Credentials Grant
-		token, tokenError, err = GetClientCredentialsToken(application, clientSecret, scope, host, expireInSeconds)
+		token, tokenError, err = GetClientCredentialsToken(application, username, clientSecret, scope, host, expireInSeconds)
 	case "refresh_token":
 		refreshToken2, err := RefreshToken(grantType, refreshToken, scope, clientId, clientSecret, host)
 		if err != nil {
@@ -758,7 +758,7 @@ func GetPasswordToken(application *Application, username string, password string
 
 // GetClientCredentialsToken
 // Client Credentials flow
-func GetClientCredentialsToken(application *Application, clientSecret string, scope string, host string, expireInSeconds int) (*Token, *TokenError, error) {
+func GetClientCredentialsToken(application *Application, username, clientSecret string, scope string, host string, expireInSeconds int) (*Token, *TokenError, error) {
 	if expireInSeconds == 0 {
 		expireInSeconds = application.ExpireInHours * hourSeconds
 	}
@@ -769,14 +769,36 @@ func GetClientCredentialsToken(application *Application, clientSecret string, sc
 			ErrorDescription: "client_secret is invalid",
 		}, nil
 	}
-	nullUser := &User{
-		Owner: application.Owner,
-		Id:    application.GetId(),
-		Name:  application.Name,
-		Type:  "application",
+
+	var user *User
+	if username != "" {
+		user, _ = getUser(application.Organization, username)
+	}
+	if user == nil {
+		// apply null user
+		user = &User{
+			Owner: application.Owner,
+			Id:    application.GetId(),
+			Name:  fmt.Sprintf("app/%s", application.Name),
+			Type:  "application",
+		}
+	} else {
+		if user.IsForbidden {
+			return nil, &TokenError{
+				Error:            InvalidGrant,
+				ErrorDescription: "the user is forbidden to sign in, please contact the administrator",
+			}, nil
+		}
+		err := ExtendUserWithRolesAndPermissions(user)
+		if err != nil {
+			return nil, &TokenError{
+				Error:            InvalidRequest,
+				ErrorDescription: "cannot fetch user's roles and permission",
+			}, nil
+		}
 	}
 
-	accessToken, _, tokenName, err := generateJwtToken(application, nullUser, "", scope, host, expireInSeconds)
+	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, "", scope, host, expireInSeconds)
 	if err != nil {
 		return nil, &TokenError{
 			Error:            EndpointError,
@@ -788,10 +810,11 @@ func GetClientCredentialsToken(application *Application, clientSecret string, sc
 		Name:         tokenName,
 		CreatedTime:  util.GetCurrentTime(),
 		Application:  application.Name,
-		Organization: application.Organization,
-		User:         nullUser.Name,
+		Organization: user.Owner,
+		User:         user.Name,
 		Code:         util.GenerateClientId(),
 		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		ExpiresIn:    expireInSeconds,
 		Scope:        scope,
 		TokenType:    "Bearer",
