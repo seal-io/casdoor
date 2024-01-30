@@ -198,7 +198,9 @@ func initBuiltInApplication() {
 		Tags:          []string{},
 		RedirectUris:  []string{},
 		TokenFields:   []string{},
-		ExpireInHours: 168,
+		ExpireInHours: 1,
+		TokenFormat:   "JWT",
+		GrantTypes:    []string{"token", "password", "client_credentials", "authorization_code"},
 		FormOffset:    2,
 	}
 	_, err = AddApplication(application)
