@@ -66,6 +66,7 @@ type Token struct {
 }
 
 type TokenWrapper struct {
+	Owner        string `json:"owner"`
 	Name         string `json:"name"`
 	AccessToken  string `json:"access_token"`
 	IdToken      string `json:"id_token"`
@@ -462,6 +463,7 @@ func GetOAuthToken(grantType string, clientId string, clientSecret string, code 
 	go updateUsedByCode(token)
 
 	tokenWrapper := &TokenWrapper{
+		Owner:        token.Owner,
 		Name:         token.Name,
 		AccessToken:  token.AccessToken,
 		IdToken:      token.AccessToken,
@@ -580,6 +582,7 @@ func RefreshToken(grantType string, refreshToken string, scope string, clientId 
 	}
 
 	tokenWrapper := &TokenWrapper{
+		Owner:        newToken.Owner,
 		Name:         newToken.Name,
 		AccessToken:  newToken.AccessToken,
 		IdToken:      newToken.AccessToken,
