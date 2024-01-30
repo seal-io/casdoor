@@ -230,6 +230,8 @@ func UpdateOrganization(id string, organization *Organization) (bool, error) {
 }
 
 func AddOrganization(organization *Organization) (bool, error) {
+	organization.CreatedTime = util.GetCurrentTime()
+
 	affected, err := ormer.Engine.Insert(organization)
 	if err != nil {
 		return false, err

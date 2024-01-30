@@ -760,6 +760,8 @@ func AddUser(user *User) (bool, error) {
 	}
 
 	if user.PasswordType == "" || user.PasswordType == "plain" {
+		user.CreatedTime = util.GetCurrentTime()
+
 		user.UpdateUserPassword(organization)
 	}
 
