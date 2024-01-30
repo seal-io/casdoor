@@ -169,6 +169,7 @@ func (c *ApiController) GetOAuthToken() {
 	tag := c.Input().Get("tag")
 	avatar := c.Input().Get("avatar")
 	refreshToken := c.Input().Get("refresh_token")
+	expiryInSeconds, _ := c.GetInt("expiry_in_seconds")
 
 	if clientId == "" && clientSecret == "" {
 		clientId, clientSecret, _ = c.Ctx.Request.BasicAuth()
@@ -212,11 +213,14 @@ func (c *ApiController) GetOAuthToken() {
 			if refreshToken == "" {
 				refreshToken = tokenRequest.RefreshToken
 			}
+			if expiryInSeconds == 0 {
+				expiryInSeconds = tokenRequest.ExpiryInSeconds
+			}
 		}
 	}
 
 	host := c.Ctx.Request.Host
-	token, err := object.GetOAuthToken(grantType, clientId, clientSecret, code, verifier, scope, username, password, host, refreshToken, tag, avatar, c.GetAcceptLanguage())
+	token, err := object.GetOAuthToken(grantType, clientId, clientSecret, code, verifier, scope, username, password, host, refreshToken, tag, avatar, c.GetAcceptLanguage(), expiryInSeconds)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return
